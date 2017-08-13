@@ -1,0 +1,11 @@
+add_library(surveillance
+  common.cpp
+  decoder.cpp
+  demuxer.cpp
+  display.cpp
+  motion_detector.cpp
+  motion_estimator.cpp
+  muxer.cpp
+  output.cpp
+  packet.cpp
+)
