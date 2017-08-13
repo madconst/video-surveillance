@@ -1,6 +1,8 @@
 #include <iostream>
 #include <queue>
 #include <ctime>
+#include <fstream>
+#include <stdio.h>
 extern "C" {
   #include <libavformat/avio.h>
   #include <libavdevice/avdevice.h>
@@ -14,8 +16,9 @@ extern "C" {
 #include "inc/motion_detector.h"
 #include "inc/packet.h"
 #include "inc/recorder.h"
+#include "inc/encoder.h"
 
-const std::string url = "rtsp://some.cam/url"
+const std::string url = "rtsp://some.cam/url";
 const std::string out_directory = "out";
 const std::string file_prefix = "motion_";
 const std::string file_format = "ts";
@@ -31,6 +34,26 @@ std::string get_date_time()
   tstruct = *localtime(&now);
   strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", &tstruct);
   return buf;
+}
+
+void save_jpeg(const AVFrame* frame, const std::string& filename)
+{
+  AVCodecParameters params{};
+  params.width = frame->width;
+  params.height = frame->height;
+  params.format = AV_PIX_FMT_YUVJ420P;
+  Encoder jpeg_encoder("mjpeg", &params);
+  // save frame as JPEG:
+  jpeg_encoder.put(frame);
+  // TODO: check result
+  Packet jpeg_packet;
+  jpeg_encoder.get(jpeg_packet);
+  // TODO: check result
+  std::string filename_part = filename + ".part";
+  std::ofstream jpeg_file(filename_part, std::ios::out | std::ios::binary);
+  jpeg_file.write(reinterpret_cast<char*>(jpeg_packet.get()->data), jpeg_packet.get()->size);
+  jpeg_file.close();
+  rename(filename_part.c_str(), filename.c_str());
 }
 
 cv::Mat av2cv(AVFrame *frame)
@@ -116,8 +139,10 @@ int main()
       std::cerr << "Failed to get frame from decoder: " << av_error(result) << std::endl;
       continue;
     }
+
     recorder.flush(); // empty recorder on every new key frame
     if (detect(av2cv(frame))) {
+      save_jpeg(frame, out_directory + "/" + std::to_string(stats.key_frames) + ".jpg");
       // motion detected
       if (!recorder.recording()) {
         ++stats.chunks;
@@ -138,16 +163,3 @@ int main()
   }
   av_frame_free(&frame);
 }
-
-/*
-no motion, no key => add packet to queue
-no motion, key => flush queue
-motion, no key => write
-motion, key => flush buffer, create muxer, write
-
-I P P .... I P P .... I P P P ... I P P P ...
-^          ^         ^           |
-|        motion detected         |
-|                                |
-|-----------recorded-------------|
-*/
