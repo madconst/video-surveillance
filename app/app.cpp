@@ -21,11 +21,11 @@ extern "C" {
 const std::string url = "rtsp://some.cam/url";
 const std::string out_directory = "out";
 const std::string file_prefix = "motion_";
-const std::string file_format = "ts";
+const std::string video_format = "ts";
 
 bool stop = false;
 
-std::string get_date_time()
+std::string date_time()
 {
   // Get current date/time, format is YYYY-MM-DD.HH:mm:ss
   time_t     now = time(0);
@@ -69,7 +69,8 @@ struct Statistics
 {
   size_t packets_total;
   size_t video_packets;
-  size_t key_frames;
+  size_t key_frames_total;
+  size_t key_frames_motion;
   size_t chunks;
 };
 
@@ -127,7 +128,7 @@ int main()
       continue;
     }
     // process key frame
-    ++stats.key_frames;
+    ++stats.key_frames_total;
     int result = decoder.put(packet);
     if (result) { // AVERROR(EAGAIN), AVERROR(EINVAL), AVERROR(ENOMEM): https://ffmpeg.org/doxygen/3.2/group__lavc__decoding.html
       std::cerr << "Failed to put packet to decoder: " << av_error(result) << std::endl;
@@ -142,13 +143,22 @@ int main()
 
     recorder.flush(); // empty recorder on every new key frame
     if (detect(av2cv(frame))) {
-      save_jpeg(frame, out_directory + "/" + std::to_string(stats.key_frames) + ".jpg");
       // motion detected
+
+      // save keyframe as a JPEG image
+      ++stats.key_frames_motion;
+      save_jpeg(frame, out_directory + "/"
+      + file_prefix + date_time() + "_"
+      + std::to_string(stats.chunks) + "_"
+      + std::to_string(stats.key_frames_motion) + ".jpg");
+
+      // start recording video
       if (!recorder.recording()) {
         ++stats.chunks;
         std::string filename = out_directory + "/"
-            + file_prefix + std::to_string(stats.chunks)
-            + "." + file_format;
+            + file_prefix + date_time() + "_"
+            + std::to_string(stats.chunks)
+            + "." + video_format;
         recorder.start_recording(filename);
         std::cout << "Recording " << filename << std::endl;
         std::cout.flush();
