@@ -25,14 +25,13 @@ const std::string video_format = "ts";
 
 bool stop = false;
 
-std::string date_time()
+std::string date_time(const std::string& format = "%Y-%m-%d %H:%M:%S")
 {
-  // Get current date/time, format is YYYY-MM-DD.HH:mm:ss
   time_t     now = time(0);
   struct tm  tstruct;
   char       buf[80];
   tstruct = *localtime(&now);
-  strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", &tstruct);
+  strftime(buf, sizeof(buf), format.c_str(), &tstruct);
   return buf;
 }
 
@@ -144,29 +143,32 @@ int main()
     recorder.flush(); // empty recorder on every new key frame
     if (detect(av2cv(frame))) {
       // motion detected
+      std::cout << date_time() << " Motion detected" << std::endl;
 
       // save keyframe as a JPEG image
       ++stats.key_frames_motion;
-      save_jpeg(frame, out_directory + "/"
-      + file_prefix + date_time() + "_"
-      + std::to_string(stats.chunks) + "_"
-      + std::to_string(stats.key_frames_motion) + ".jpg");
+      std::string filename = out_directory + "/"
+        + file_prefix + date_time("%Y%m%d_%H%M%S") + "_"
+        + std::to_string(stats.chunks) + "_"
+        + std::to_string(stats.key_frames_motion) + ".jpg";
+      std::cout << date_time() << " Saved image " << filename << std::endl;
+      save_jpeg(frame, filename);
+
 
       // start recording video
       if (!recorder.recording()) {
         ++stats.chunks;
         std::string filename = out_directory + "/"
-            + file_prefix + date_time() + "_"
+            + file_prefix + date_time("%Y%m%d_%H%M%S") + "_"
             + std::to_string(stats.chunks)
             + "." + video_format;
         recorder.start_recording(filename);
-        std::cout << "Recording " << filename << std::endl;
-        std::cout.flush();
+        std::cout << date_time() << " Started recording " << filename << std::endl;
       }
     } else {
       if (recorder.recording()) {
         recorder.stop_recording();
-        std::cout << " done" << std::endl;
+        std::cout << date_time() << " Motion stopped" << std::endl;
       }
     }
     recorder.push(std::move(packet));
