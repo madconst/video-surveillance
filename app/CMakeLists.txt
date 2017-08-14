@@ -1,8 +1,8 @@
-add_executable(app
-  app.cpp
+add_executable(netcam
+  netcam.cpp
 )
 
-target_link_libraries(app
+target_link_libraries(netcam
   surveillance
   avformat
   avdevice
