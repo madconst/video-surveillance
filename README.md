@@ -22,6 +22,7 @@ The project depends on the following libraries:
 $ mkdir out
 $ ./app/netcam -i rtsp://some.cam/url -o out/
 2017-08-14 22:22:43 Opened rtsp://some.cam/url
+2017-08-14 22:22:49 Motion detected
 2017-08-14 22:22:49 Started recording out//20170814_222249_1.mp4
 2017-08-14 22:22:49 Saved image out//20170814_222249_1_1.jpg
 2017-08-14 22:22:51 Saved image out//20170814_222251_1_2.jpg

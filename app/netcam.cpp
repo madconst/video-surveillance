@@ -8,6 +8,27 @@
 #include "inc/packet.h"
 #include "inc/recorder.h"
 
+/* TODO: move to README.md
+Frame sequence:
+ I P P P ... I P P P ... I P P P ... I P P P ... I P P P ... I P P P ...
+             |           ^           ^         | ^
+             |    diff detected  diff detected | no more diffs
+             |----------- recorded ------------|
+
+Only i-frames are analyzed:
+i-frame  1:
+i-frame  2: <----------------------------------------------- actual record start
+i-frame  3: motion detected (diff between i-frames 3 and 2)
+i-frame  4: motion present
+i-frame  5: no motion -> suspend recording
+i-frame  6: motion present -> resume recording
+i-frame  7: motion present <--------------------------------- actual record stop
+i-frame  8: no motion -> suspend recording
+i-frame  9: no motion
+i-frame 10: no motion
+i-frame 11: no motion -> stop recording (throw away record since last suspended)
+*/
+
 struct Config
 {
   std::string input;
@@ -64,6 +85,7 @@ int main(int argc, const char* argv[])
   }
 
   Statistics stats{};
+  auto last_state = MotionState::ABSENT;
 
   AVFrame* frame = av_frame_alloc();
   while (!stop) {
@@ -102,38 +124,75 @@ int main(int argc, const char* argv[])
       continue;
     }
 
-    recorder.flush(); // empty recorder on every new key frame
-    if (detect(av2cv(frame))) { // motion detected
+    auto state = detect(av2cv(frame));
+    // 3 states: present, suspended, absent
+    // 6 possible transitions, 5 allowed:
+    // absent->present     => start recording
+    // present->suspended  => suspend recording
+    // suspended->present  => resume recording
+    // suspended->absent   => stop recording
+    // present->absent     => stop recording
+    // absent->suspended - must not occur
 
-      // skip the very first key frame, it has no diff
-      if (stats.last_motion_key_frames) {
-        std::string filename = config.output_directory + "/"
-          + config.file_prefix + date_time("%Y%m%d_%H%M%S") + "_"
-          + std::to_string(stats.chunks) + "_"
-          + std::to_string(stats.last_motion_key_frames) + ".jpg";
-        std::cout << date_time() << " Saved image " << filename << std::endl;
-        // save keyframe as a JPEG image
-        save_jpeg(frame, filename);
-      }
-      ++stats.last_motion_key_frames;
-
+    if (last_state == MotionState::ABSENT && state == MotionState::PRESENT) {
       // start recording video
-      if (!recorder.recording()) {
-        ++stats.chunks;
-        std::string filename = config.output_directory + "/"
-            + config.file_prefix + date_time("%Y%m%d_%H%M%S") + "_"
-            + std::to_string(stats.chunks)
-            + "." + config.video_format;
+      stats.last_motion_key_frames = 0;
+      ++stats.chunks;
+      std::string filename = config.output_directory + "/"
+          + config.file_prefix + date_time("%Y%m%d_%H%M%S") + "_"
+          + std::to_string(stats.chunks)
+          + "." + config.video_format;
+      try {
         recorder.start_recording(filename);
-        std::cout << date_time() << " Started recording " << filename << std::endl;
-      }
-    } else { // no motion detected
-      if (recorder.recording()) {
-        recorder.stop_recording();
-        std::cout << date_time() << " Stopped recording" << std::endl;
-        stats.last_motion_key_frames = 0;
+        std::cout << date_time() << " Motion detected, started recording " << filename << std::endl;
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
       }
     }
+
+    if (state == MotionState::PRESENT) {
+      std::string filename = config.output_directory + "/"
+      + config.file_prefix + date_time("%Y%m%d_%H%M%S") + "_"
+      + std::to_string(stats.chunks) + "_"
+      + std::to_string(stats.last_motion_key_frames) + ".jpg";
+      // save keyframe as a JPEG image
+      try {
+        save_jpeg(frame, filename);
+        std::cout << date_time() << " Motion present, saved image " << filename << std::endl;
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+      }
+    }
+
+    if (last_state == MotionState::PRESENT && state == MotionState::SUSPENDED) {
+      std::cout << date_time() << " Motion suspended" << std::endl;
+      try {
+        recorder.suspend();
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+      }
+    }
+
+    if (last_state == MotionState::SUSPENDED && state == MotionState::PRESENT) {
+      std::cout << date_time() << " Motion resumed" << std::endl;
+      try {
+        recorder.resume();
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+      }
+    }
+
+    if (last_state != MotionState::ABSENT && state == MotionState::ABSENT) {
+      recorder.stop_recording();
+      std::cout << date_time() << " No motion, stopped recording" << std::endl;
+    }
+
+    if (state == MotionState::ABSENT) {
+      recorder.flush(); // empty recorder on every new key frame if no motion
+    }
+
+    last_state = state;
+
     recorder.push(std::move(packet));
   }
   av_frame_free(&frame);
@@ -141,7 +200,6 @@ int main(int argc, const char* argv[])
 
 void process_options(int argc, const char* argv[])
 {
-  // using namespace boost::program_options;
   namespace po = boost::program_options;
 
   po::options_description desc{"Options"};

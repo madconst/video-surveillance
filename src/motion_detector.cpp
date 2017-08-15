@@ -1,15 +1,20 @@
 #include "inc/motion_detector.h"
 
-MotionDetector::MotionDetector(std::chrono::seconds threshold) :
-  threshold_(threshold)
+MotionDetector::MotionDetector(std::chrono::seconds time_threshold, double diff_threshold) :
+  time_threshold_(time_threshold),
+  diff_threshold_(diff_threshold)
 {}
-bool MotionDetector::operator()(const cv::Mat& frame)
+MotionState MotionDetector::operator()(const cv::Mat& frame)
 {
-  double diff = estimator_(frame);
-  if (diff > 2.0) {
+  diff_ = estimator_(frame);
+  if (diff_ > diff_threshold_) {
     last_detected_ = std::chrono::steady_clock::now();
+    return MotionState::PRESENT;
   }
-  return std::chrono::steady_clock::now() - last_detected_ < threshold_;
+  if (std::chrono::steady_clock::now() - last_detected_ < time_threshold_) {
+    return MotionState::SUSPENDED;
+  }
+  return MotionState::ABSENT;
 }
 cv::Mat MotionDetector::diff()
 {

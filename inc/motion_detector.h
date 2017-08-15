@@ -6,16 +6,20 @@
 
 using namespace std::chrono_literals;
 
+enum class MotionState { PRESENT, SUSPENDED, ABSENT };
+
 class MotionDetector
 {
 public:
-  explicit MotionDetector(std::chrono::seconds threshold = 3s);
-  bool operator()(const cv::Mat& frame);
+  explicit MotionDetector(std::chrono::seconds time_threshold = 3s, double diff_threshold = 5.0);
+  MotionState operator()(const cv::Mat& frame);
   cv::Mat diff();
 private:
   MotionEstimator estimator_;
   std::chrono::steady_clock::time_point last_detected_;
-  const std::chrono::seconds threshold_;
+  const std::chrono::seconds time_threshold_;
+  const double diff_threshold_;
+  double diff_ = 0.0;
 };
 
 #endif // MOTION_DETECTOR_H

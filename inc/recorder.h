@@ -15,7 +15,7 @@ public:
   }
   void push(Packet packet)
   {
-    if (muxer_) {
+    if (muxer_ && !suspended_) {
       muxer_->write(std::move(packet));
     } else {
       queue_.push(std::move(packet));
@@ -27,15 +27,29 @@ public:
     for (auto p: stream_parameters_) {
       muxer_->add_stream(p);
     }
+    suspended_ = false;
+    flush();
+  }
+  void suspend()
+  {
+    suspended_ = true;
+  }
+  void resume()
+  {
+    suspended_ = false;
     flush();
   }
   void stop_recording()
   {
     muxer_.reset();
   }
-  bool recording()
+  bool recording() const
   {
     return !!muxer_;
+  }
+  bool suspended() const
+  {
+    return suspended_;
   }
   void flush()
   {
@@ -50,6 +64,7 @@ private:
   std::vector<const AVCodecParameters*> stream_parameters_;
   std::queue<Packet> queue_;
   std::unique_ptr<Muxer> muxer_;
+  bool suspended_;
 };
 
 #endif // RECORDER_H
