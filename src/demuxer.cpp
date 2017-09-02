@@ -94,7 +94,7 @@ void Demuxer::throw_if_not_open() const
 int Demuxer::interrupt_callback(void* ptr)
 {
   auto this_ = static_cast<Demuxer*>(ptr);
-  if (this_->last_read_ - Clock::now() > READ_TIMEOUT) {
+  if (Clock::now() - this_->last_read_ > READ_TIMEOUT) {
     return 1;
   }
   return 0;

@@ -36,7 +36,7 @@ private:
   AVFormatContext* ctx_ = nullptr;
   AVInputFormat* in_format_ = nullptr;
   AVDictionary *options_ = nullptr;
-  Clock::time_point last_read_;
+  Clock::time_point last_read_ = Clock::now();
   static const Clock::duration READ_TIMEOUT;
 };
 
