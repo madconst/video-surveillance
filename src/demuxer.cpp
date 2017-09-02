@@ -3,6 +3,8 @@
 #include "inc/exception.h"
 #include "inc/demuxer.h"
 
+const Clock::duration Demuxer::READ_TIMEOUT = 3s;
+
 Demuxer::Demuxer(const std::string& format)
 {
   if (format.empty()) {
@@ -25,6 +27,11 @@ Demuxer& Demuxer::set_option(const std::string& key, int value, int flags)
 }
 void Demuxer::open(const std::string& url)
 {
+  ctx_ = avformat_alloc_context();
+  if (!ctx_) {
+    throw Exception("Failed to allocate demuxer context");
+  }
+  ctx_->interrupt_callback = { &Demuxer::interrupt_callback, this };
   // check video source
   int result = avformat_open_input(&ctx_, url.c_str(), in_format_, &options_);
   if (result) {
@@ -50,6 +57,7 @@ Packet Demuxer::read()
 {
   throw_if_not_open();
   Packet packet;
+  last_read_ = Clock::now();
   int result = av_read_frame(ctx_, packet.get());
   if (result) {
     throw Exception("Failed to read packet: " + av_error(result));
@@ -82,4 +90,12 @@ void Demuxer::throw_if_not_open() const
 {
   if (ctx_) return;
   throw Exception("Demuxer is not opened");
+}
+int Demuxer::interrupt_callback(void* ptr)
+{
+  auto this_ = static_cast<Demuxer*>(ptr);
+  if (this_->last_read_ - Clock::now() > READ_TIMEOUT) {
+    return 1;
+  }
+  return 0;
 }

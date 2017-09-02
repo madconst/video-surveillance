@@ -1,6 +1,7 @@
 #ifndef DEMUXER_H
 #define DEMUXER_H
 
+#include <chrono>
 extern "C"
 {
   #include <libavformat/avformat.h>
@@ -13,6 +14,9 @@ dmx
 .set_option("framerate", 30)
 .open("file:/dev/video0");
 */
+
+using namespace std::chrono_literals;
+using Clock = std::chrono::steady_clock;
 
 class Demuxer
 {
@@ -28,9 +32,12 @@ public:
   size_t video_stream_index() const;
 private:
   void throw_if_not_open() const;
+  static int interrupt_callback(void* this_);
   AVFormatContext* ctx_ = nullptr;
   AVInputFormat* in_format_ = nullptr;
   AVDictionary *options_ = nullptr;
+  Clock::time_point last_read_;
+  static const Clock::duration READ_TIMEOUT;
 };
 
 #endif // DEMUXER_H
