@@ -15,3 +15,17 @@ target_link_libraries(netcam
   ${Boost_LIBRARIES}
   pthread
 )
+
+add_executable(keyframe
+  keyframe.cpp
+)
+
+target_link_libraries(keyframe
+  surveillance
+  avformat
+  avdevice
+  avcodec
+  avutil
+  ${OpenCV_LIBS}
+  ${Boost_LIBRARIES}
+)
