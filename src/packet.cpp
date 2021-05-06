@@ -54,3 +54,7 @@ const AVPacket* Packet::get() const noexcept
 {
   return packet_;
 }
+bool Packet::is_corrupt() const noexcept
+{
+  return packet_->flags & AV_PKT_FLAG_CORRUPT;
+}

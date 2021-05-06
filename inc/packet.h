@@ -19,6 +19,7 @@ public:
   void reset() noexcept;
   AVPacket* get() noexcept;
   const AVPacket* get() const noexcept;
+  bool is_corrupt() const noexcept;
 private:
   AVPacket* packet_;
 };
