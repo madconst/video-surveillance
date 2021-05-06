@@ -8,4 +8,7 @@ add_library(surveillance
   muxer.cpp
   output.cpp
   packet.cpp
+  frame.cpp
+  scaler.cpp
+  encoder.cpp
 )
