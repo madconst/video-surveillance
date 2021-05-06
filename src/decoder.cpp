@@ -1,5 +1,6 @@
 #include "inc/exception.h"
 #include "inc/decoder.h"
+#include "inc/common.h"
 
 Decoder::Decoder(const AVCodecParameters* codec_params)
 {
@@ -20,11 +21,34 @@ Decoder::~Decoder()
 {
   avcodec_free_context(&codec_ctx_);
 }
-int Decoder::put(Packet packet)
+void Decoder::put(Packet packet)
 {
-  return avcodec_send_packet(codec_ctx_, packet.get());
+  int ret = avcodec_send_packet(codec_ctx_, packet.get());
+  if (ret < 0) {
+    throw Exception(av_error(ret));
+  }
+  while (true) {
+    Frame frame;
+    ret = avcodec_receive_frame(codec_ctx_, frame.get());
+    if (ret == AVERROR(EAGAIN)) {
+      break;
+    }
+    if (ret < 0) {
+      throw Exception(av_error(ret));
+    }
+    frames_.push(std::move(frame));
+  }
 }
-int Decoder::get(AVFrame* frame)
+bool Decoder::has_output() const
 {
-  return avcodec_receive_frame(codec_ctx_, frame);
+  return frames_.size();
+}
+Frame Decoder::get()
+{
+  if (frames_.empty()) {
+    throw Exception("No frames available in decoder");
+  }
+  auto frame = std::move(frames_.front());
+  frames_.pop();
+  return frame;
 }
