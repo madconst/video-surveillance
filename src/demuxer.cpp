@@ -56,7 +56,7 @@ Demuxer::~Demuxer()
 Packet Demuxer::read()
 {
   throw_if_not_open();
-  Packet packet;
+  Packet packet{};
   last_read_ = Clock::now();
   int result = av_read_frame(ctx_, packet.get());
   if (result) {

@@ -65,7 +65,6 @@ int main(int argc, const char* argv[])
   try {
     demux
     .set_option("rtsp_flags", "prefer_tcp")
-    .set_option("rtsp_flags", "prefer_tcp")
     .open(config.input);
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
@@ -87,7 +86,7 @@ int main(int argc, const char* argv[])
   Statistics stats{};
   auto last_state = MotionState::ABSENT;
 
-  AVFrame* frame = av_frame_alloc();
+  Frame frame;
   while (!stop) {
     Packet packet;
     try {
@@ -112,19 +111,9 @@ int main(int argc, const char* argv[])
     }
     // process key frame
     ++stats.key_frames_total;
-    int result = decoder.put(packet);
-    if (result) { // AVERROR(EAGAIN), AVERROR(EINVAL), AVERROR(ENOMEM): https://ffmpeg.org/doxygen/3.2/group__lavc__decoding.html
-      std::cerr << "Failed to put packet to decoder: " << av_error(result) << std::endl;
-      continue;
-    }
-    av_frame_unref(frame);
-    result = decoder.get(frame);
-    if (result) { // AVERROR(EAGAIN), AVERROR_EOF, AVERROR(EINVAL)
-      std::cerr << "Failed to get frame from decoder: " << av_error(result) << std::endl;
-      continue;
-    }
-
-    auto state = detect(av2cv(frame));
+    decoder.put(packet);
+    frame = decoder.get(); // key frame is always decoded instantly
+    auto state = detect(av2cv(frame.get()));
     // 3 states: present, suspended, absent
     // 6 possible transitions, 5 allowed:
     // absent->present     => start recording
@@ -195,7 +184,6 @@ int main(int argc, const char* argv[])
 
     recorder.push(std::move(packet));
   }
-  av_frame_free(&frame);
 }
 
 void process_options(int argc, const char* argv[])
@@ -207,6 +195,7 @@ void process_options(int argc, const char* argv[])
   ("help,h", "This help message")
   ("input,i", po::value<std::string>(), "Input video stream")
   ("output,o", po::value<std::string>(), "Output directory")
+  ("view,v", po::value<std::string>(), "Name of a file to save the latest key frame to")
   ("prefix,p", po::value<std::string>(), "File prefix");
 
   po::variables_map vmap;

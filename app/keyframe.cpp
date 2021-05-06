@@ -1,17 +1,16 @@
 #include <iostream>
-#include <stdio.h>
 #include <boost/program_options.hpp>
 #include "inc/common.h"
 #include "inc/demuxer.h"
 #include "inc/decoder.h"
 #include "inc/packet.h"
-#include "inc/recorder.h"
+#include "inc/frame.h"
+#include "inc/scaler.h"
 
 struct Config
 {
   std::string input;
   std::string output;
-  std::string output_part;
 } config;
 
 struct Statistics
@@ -47,13 +46,19 @@ int main(int argc, const char* argv[])
   }
   size_t video_stream_index = demux.video_stream_index();
 
-  Decoder decoder(demux.stream_parameters(video_stream_index));
+  auto video_parameters = demux.stream_parameters(video_stream_index);
+  Decoder decoder(video_parameters);
 
   std::cout << date_time() << " Opened " << config.input << std::endl;
 
   Statistics stats{};
 
-  AVFrame* frame = av_frame_alloc();
+  Frame frame;
+  Scaler downscale;
+  downscale
+  .from(video_parameters->width, video_parameters->height, static_cast<AVPixelFormat>(video_parameters->format))
+  .to(video_parameters->width/2, video_parameters->height/2, static_cast<AVPixelFormat>(video_parameters->format))
+  .open(SWS_FAST_BILINEAR);
   while (!stop) {
     Packet packet;
     try {
@@ -75,28 +80,19 @@ int main(int argc, const char* argv[])
     }
     // process key frame
     ++stats.key_frames_total;
-    int result = decoder.put(packet);
-    if (result) { // AVERROR(EAGAIN), AVERROR(EINVAL), AVERROR(ENOMEM): https://ffmpeg.org/doxygen/3.2/group__lavc__decoding.html
-      std::cerr << "Failed to put packet to decoder: " << av_error(result) << std::endl;
-      continue;
-    }
-    av_frame_unref(frame);
-    result = decoder.get(frame);
-    if (result) { // AVERROR(EAGAIN), AVERROR_EOF, AVERROR(EINVAL)
-      std::cerr << "Failed to get frame from decoder: " << av_error(result) << std::endl;
-      continue;
-    }
+
+    decoder.put(std::move(packet));
+    frame = decoder.get(); // key frame is always decoded instantly
 
     // save keyframe as a JPEG image
+    Frame small = downscale(frame);
     try {
-      save_jpeg(frame, config.output_part);
-      ::rename(config.output_part.c_str(), config.output.c_str());
-      std::cout << date_time() << " Saved image " << config.output << std::endl;
+      save_jpeg(frame, config.output + ".jpg");
+      save_jpeg(small, config.output + "-sm.jpg");
     } catch (const std::exception& e) {
       std::cerr << e.what() << std::endl;
     }
   }
-  av_frame_free(&frame);
 }
 
 void process_options(int argc, const char* argv[])
@@ -107,7 +103,7 @@ void process_options(int argc, const char* argv[])
   desc.add_options()
   ("help,h", "This help message")
   ("input,i", po::value<std::string>(), "Input video stream")
-  ("output,o", po::value<std::string>(), "Name of the file to save the latest I-frame to");
+  ("output,o", po::value<std::string>(), "Name of the file (without extension) to save the latest I-frame to");
 
   po::variables_map vmap;
   po::store(parse_command_line(argc, argv, desc), vmap);
@@ -118,7 +114,6 @@ void process_options(int argc, const char* argv[])
   }
   if (vmap.count("output")) {
     config.output = vmap["output"].as<std::string>();
-    config.output_part = vmap["output"].as<std::string>() + ".part";
   }
   if (vmap.count("help") || config.input.empty() || config.output.empty()) {
     std::cout << desc << std::endl;
