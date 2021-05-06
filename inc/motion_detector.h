@@ -13,7 +13,8 @@ class MotionDetector
 public:
   explicit MotionDetector(std::chrono::seconds time_threshold = 3s, double diff_threshold = 5.0);
   MotionState operator()(const cv::Mat& frame);
-  cv::Mat diff();
+  double diff() const;
+  cv::Mat delta_image() const;
 private:
   MotionEstimator estimator_;
   std::chrono::steady_clock::time_point last_detected_;

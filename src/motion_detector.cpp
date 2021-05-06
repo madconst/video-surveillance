@@ -16,7 +16,11 @@ MotionState MotionDetector::operator()(const cv::Mat& frame)
   }
   return MotionState::ABSENT;
 }
-cv::Mat MotionDetector::diff()
+double MotionDetector::diff() const
+{
+  return diff_;
+}
+cv::Mat MotionDetector::delta_image() const
 {
   return estimator_.diff();
 }
