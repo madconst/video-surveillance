@@ -1,5 +1,6 @@
 #include "inc/exception.h"
 #include "inc/muxer.h"
+#include "inc/common.h"
 
 Muxer::Muxer(const std::string& uri, const std::string& format) :
   output_(Output{uri})
@@ -42,7 +43,9 @@ void Muxer::write(Packet packet)
 {
   if (!header_written_) {
     int result = avformat_write_header(ctx_, nullptr /* options */);
-    // TODO: check result and throw
+    if (result < 0) {
+      throw Exception("Failed to write header: " + av_error(result));
+    }
     header_written_ = true;
   }
   av_interleaved_write_frame(ctx_, packet.get());
