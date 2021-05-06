@@ -11,3 +11,8 @@ find_package(OpenCV REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR})
 add_subdirectory(app/)
 add_subdirectory(src/)
+
+if(ENABLE_TESTS)
+  enable_testing()
+  add_subdirectory(tests/)
+endif()
