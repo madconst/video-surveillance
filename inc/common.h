@@ -9,6 +9,7 @@ extern "C" {
   #include <libavcodec/avcodec.h>
   #include <libavutil/imgutils.h>
 }
+#include "inc/frame.h"
 
 void init_ffmpeg();
 
@@ -18,6 +19,6 @@ std::string date_time(const std::string& format = "%Y-%m-%d %H:%M:%S");
 
 cv::Mat av2cv(AVFrame *frame);
 
-void save_jpeg(const AVFrame* frame, const std::string& filename);
+void save_jpeg(const Frame& frame, const std::string& filename);
 
 #endif // COMMON_H

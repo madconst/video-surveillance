@@ -9,8 +9,6 @@ extern "C" {
 void init_ffmpeg()
 {
   avdevice_register_all();
-  avcodec_register_all();
-  av_register_all();
   avformat_network_init();
 }
 
@@ -39,7 +37,7 @@ cv::Mat av2cv(AVFrame *frame)
     frame->linesize[0]);
 }
 
-void save_jpeg(const AVFrame* frame, const std::string& filename)
+void save_jpeg(const Frame& frame, const std::string& filename)
 {
   AVCodecParameters params{};
   params.width = frame->width;
@@ -48,10 +46,7 @@ void save_jpeg(const AVFrame* frame, const std::string& filename)
   Encoder jpeg_encoder("mjpeg", &params);
   // save frame as JPEG:
   jpeg_encoder.put(frame);
-  // TODO: check result
-  Packet jpeg_packet;
-  jpeg_encoder.get(jpeg_packet);
-  // TODO: check result
+  auto jpeg_packet = jpeg_encoder.get();
   std::string filename_part = filename + ".part";
   std::ofstream jpeg_file(filename_part, std::ios::out | std::ios::binary);
   jpeg_file.write(reinterpret_cast<char*>(jpeg_packet.get()->data), jpeg_packet.get()->size);
