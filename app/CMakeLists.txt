@@ -7,12 +7,9 @@ add_executable(netcam
 
 target_link_libraries(netcam
   surveillance
-  avformat
-  avdevice
-  avcodec
-  avutil
   ${OpenCV_LIBS}
   ${Boost_LIBRARIES}
+  ${AVFORMAT_LIBRARY} ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} ${SWSCALE_LIBRARY}
   pthread
 )
 
@@ -22,10 +19,7 @@ add_executable(keyframe
 
 target_link_libraries(keyframe
   surveillance
-  avformat
-  avdevice
-  avcodec
-  avutil
   ${OpenCV_LIBS}
   ${Boost_LIBRARIES}
+  ${AVFORMAT_LIBRARY} ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} ${SWSCALE_LIBRARY}
 )
