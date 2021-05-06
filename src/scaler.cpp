@@ -12,12 +12,14 @@ Scaler& Scaler::from(int width, int height, AVPixelFormat pixel_format /*= AV_PI
   src_width_ = width;
   src_height_ = height;
   src_pixel_format_ = pixel_format;
+  return *this;
 }
 Scaler& Scaler::to(int width, int height, AVPixelFormat pixel_format /*= AV_PIX_FMT_RGB24*/)
 {
   dst_width_ = width;
   dst_height_ = height;
   dst_pixel_format_ = pixel_format;
+  return *this;
 }
 Scaler& Scaler::open(int flags /*= SWS_FAST_BILINEAR*/)
 {
@@ -31,6 +33,7 @@ Scaler& Scaler::open(int flags /*= SWS_FAST_BILINEAR*/)
   if (!context_) {
     throw Exception("Failed to open scaler context");
   }
+  return *this;
 }
 Frame Scaler::operator()(const Frame& other)
 {
