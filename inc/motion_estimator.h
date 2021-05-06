@@ -7,7 +7,7 @@ class MotionEstimator
 {
 public:
   double operator()(const cv::Mat& frame); // must be grayscale
-  cv::Mat diff();
+  cv::Mat diff() const;
 private:
   const double threshold_ = 10.0;
   cv::Mat prev_;

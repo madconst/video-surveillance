@@ -17,7 +17,7 @@ double MotionEstimator::operator()(const cv::Mat& frame) // must be grayscale
   cv::swap(filtered, prev_);
   return cv::mean(diff)[0];
 }
-cv::Mat MotionEstimator::diff()
+cv::Mat MotionEstimator::diff() const
 {
   return diff_;
 }
