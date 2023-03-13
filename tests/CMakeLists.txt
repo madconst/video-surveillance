@@ -8,7 +8,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-foreach(test av_packet av_frame)
+foreach(test
+        av_packet
+        av_frame
+        av_scaler
+)
   add_executable(${test}.test ${test}.test.cpp)
 
   target_link_libraries(${test}.test PRIVATE Catch2::Catch2WithMain av common)

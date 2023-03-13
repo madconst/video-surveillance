@@ -5,6 +5,9 @@ add_library(av
         demuxer.cpp
         frame.cpp
         decoder.cpp
+        scaler.cpp
+        encoder.cpp
+        key_frame_saver.cpp
 )
 
 target_include_directories(av PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ${fmt_INCLUDE_DIR})
