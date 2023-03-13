@@ -8,6 +8,8 @@ add_library(av
         scaler.cpp
         encoder.cpp
         key_frame_saver.cpp
+        muxer.cpp
+        output.cpp
 )
 
 target_include_directories(av PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ${fmt_INCLUDE_DIR})
