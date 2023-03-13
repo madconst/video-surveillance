@@ -3,6 +3,8 @@ add_library(av
         common.cpp
         packet.cpp
         demuxer.cpp
+        frame.cpp
+        decoder.cpp
 )
 
 target_include_directories(av PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" ${fmt_INCLUDE_DIR})
