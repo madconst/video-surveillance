@@ -16,6 +16,8 @@ FetchContent_MakeAvailable(fmt)
 
 add_subdirectory(common/)
 add_subdirectory(av/)
+add_subdirectory(cv/)
+add_subdirectory(apps/)
 
 enable_testing()
 add_subdirectory(tests/)
