@@ -1,4 +1,4 @@
-add_library(cv motion_detector.cpp)
+add_library(cv motion_detector.cpp common.cpp)
 
 find_package(OpenCV REQUIRED)
 
