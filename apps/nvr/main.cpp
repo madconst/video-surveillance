@@ -1,6 +1,8 @@
 #include <iostream>
+#include <atomic>
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
+#include <signal.h>
 #include <av/demuxer.h>
 #include <av/decoder.h>
 #include <av/key_frame_saver.h>
@@ -11,11 +13,15 @@
 
 Config process_options(int argc, const char* argv[]);
 void run(const Config& config);
+void stop_handler(int signum);
+
+std::atomic_flag stop_flag = false;
 
 int main(int argc, const char* argv[])
 {
   try {
     const auto config = process_options(argc, argv);
+    ::signal(SIGINT, stop_handler);
     run(config);
   } catch (const std::exception& e) {
     std::cerr << "Fatal error: " << e.what() << std::endl;
@@ -72,8 +78,7 @@ void run(const Config& config)
     mux.add_stream(dmx.stream_parameters(i));
   }
 
-  const size_t NUM_PACKETS_TO_PROCESS = 500; // for testing purposes
-  for (size_t i = 0; i < NUM_PACKETS_TO_PROCESS; ++i) { // TODO: handle stop signal
+  while (!stop_flag.test()) {
     auto packet = dmx.read();
     mux.write(packet);
     if (packet.stream_index() != video_idx) {
@@ -94,4 +99,12 @@ void run(const Config& config)
       fmt::print("Motion score: {}\n", score);
     }
   }
+}
+
+void stop_handler(int signum) {
+  if (stop_flag.test_and_set()) {
+    std::cout << "Please wait" << std::endl;
+    return;
+  }
+  std::cout << "Stopping on SIGINT" << std::endl;
 }
