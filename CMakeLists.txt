@@ -5,6 +5,8 @@ project(video-surveillance VERSION 1.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+message("Using CXX compiler ${CMAKE_CXX_COMPILER_ID} version ${CMAKE_CXX_COMPILER_VERSION}")
+
 include_directories(${CMAKE_SOURCE_DIR})
 
 Include(FetchContent)
